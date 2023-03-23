@@ -75,22 +75,22 @@ def cell_kn_analysis(pth, dth, dna, min_area=17, kn_threshold_area=250):
   dna = dna - numpy.median(dna)
   # label objects and measure signal intensity and location
   dna_lab = skimage.measure.label(dth)
-  pth_props_table = skimage.measure.regionprops_table(dna_lab, pth, properties=("intensity_max", "area_convex"))
-  dna_props_table = skimage.measure.regionprops_table(dna_lab, dna, properties=("intensity_mean", "intensity_max", "centroid_weighted"))
+  #pth_props_table = skimage.measure.regionprops_table(dna_lab, pth, properties=("intensity_max", "area_convex"))
   dna_objects = []
   # filter dna objects
-  for i in range(0, dna_lab.max()):
+  for region in skimage.measure.regionprops(dna_lab, dna):
     # if labelled dth object overlaps cell object in pth
-    if pth_props_table["intensity_max"][i] == 255 and pth_props_table["area_convex"][i] > min_area: # MAGIG NUMBER: Minimum kinetoplast area
+    pth_overlap_max = pth[region.coords[:, 0], region.coords[:, 1]].max()
+    if pth_overlap_max == 255 and region.area_convex > min_area: # MAGIG NUMBER: Minimum kinetoplast area
       # get stats
       dna_objects.append({
         "centroid": {
-          "x": dna_props_table["centroid_weighted-0"][i],
-          "y": dna_props_table["centroid_weighted-1"][i]
+          "x": region.centroid_weighted[0],
+          "y": region.centroid_weighted[1],
         },
-        "area": pth_props_table["area_convex"][i],
-        "dna_sum": pth_props_table["area_convex"][i] * dna_props_table["intensity_mean"][i],
-        "dna_max": dna_props_table["intensity_max"][i]
+        "area": region.area_convex,
+        "dna_sum": region.area_convex * region.intensity_mean,
+        "dna_max": region.intensity_max,
       })
   # classify dna objects as k/n
   # sort by area, classify smallest ceil(count / 2) as k
